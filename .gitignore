@@ -1,2 +1,6 @@
-# environment file
-.env
+# go
+main
+
+# lambda
+bootstrap
+bootstrap.zip

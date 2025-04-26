@@ -1,31 +1,29 @@
 package main
 
 import (
-	"fmt"
-	"net/http"
-	"os"
+	"strings"
 
-	"github.com/joho/godotenv"
+	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/lambda"
 )
 
+func handler(request events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
+	path := strings.TrimPrefix(request.RawPath, "/release")
+
+	switch path {
+	case "/tagline":
+		return events.APIGatewayV2HTTPResponse{
+			StatusCode: 200,
+			Body:       "Generated ui for <i>you</i>, coming soon",
+		}, nil
+	default:
+		return events.APIGatewayV2HTTPResponse{
+			StatusCode: 404,
+			Body:       "Page not found",
+		}, nil
+	}
+}
+
 func main() {
-	if godotenv.Load() != nil {
-		fmt.Println("ERROR loading .env file")
-		return
-	}
-
-	http.HandleFunc("/tagline", func(w http.ResponseWriter, r *http.Request) {
-		devFrontendOrigin := os.Getenv("FRONTEND_DEV_ORIGIN")
-		if devFrontendOrigin != "" {
-			w.Header().Set("Access-Control-Allow-Origin", devFrontendOrigin)
-		}
-
-		fmt.Fprintf(w, "generative ui for <i><b>you</b></i> - coming soon")
-	})
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-	http.ListenAndServe(":"+port, nil)
+	lambda.Start(handler)
 }

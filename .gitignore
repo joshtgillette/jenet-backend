@@ -4,3 +4,6 @@ main
 # lambda
 bootstrap
 bootstrap.zip
+
+# env
+.env

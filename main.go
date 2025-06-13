@@ -19,7 +19,6 @@ func taglineHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func modelHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Hello from modelHandler!\n")
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -47,7 +46,7 @@ func modelHandler(w http.ResponseWriter, r *http.Request) {
 
 	client := openai.NewClient(apiKey)
 	resp, err := client.CreateChatCompletion(r.Context(), openai.ChatCompletionRequest{
-		Model: openai.GPT3Dot5Turbo,
+		Model: openai.GPT4Dot1Mini,
 		Messages: []openai.ChatCompletionMessage{
 			{Role: openai.ChatMessageRoleSystem, Content: body.Context},
 			{Role: openai.ChatMessageRoleUser, Content: body.Text},

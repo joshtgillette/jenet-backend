@@ -71,6 +71,23 @@ func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Page not found"))
 }
 
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "https://jenet.ai")
+		w.Header().Set("Access-Control-Allow-Origin", "https://dev.jenet.ai")
+		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	_ = godotenv.Load() // Loads .env file if present
 
@@ -89,6 +106,7 @@ func main() {
 		panic(http.ListenAndServe(":"+port, r))
 	} else {
 		// Run as AWS Lambda
-		lambda.Start(adapter.NewV2(r).ProxyWithContext)
+		wrapped := corsMiddleware(r)
+		lambda.Start(adapter.NewV2(wrapped).ProxyWithContext)
 	}
 }

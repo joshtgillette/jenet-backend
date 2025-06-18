@@ -51,6 +51,44 @@ func taglineHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("generated ui for <i>you</i>, coming soon"))
 }
 
+func setMessages(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	type requestBody struct {
+		Text string `json:"text"`
+	}
+	var body requestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	if body.Text == "" {
+		http.Error(w, "Missing 'text' in request body", http.StatusBadRequest)
+		return
+	}
+
+	// fmt.Printf("received message: %v\n", body.Text)
+}
+
+func getMessages(w http.ResponseWriter, r *http.Request) {
+	testData := map[string]interface{}{
+		"text":  []string{"Jody Gillette", "Hey how are you doing?", "6/17/2025", "10:50"},
+		"event": []string{"Jody Gillette", "Free for a call later?", "6/17/2025", "10:50"},
+	}
+
+	jsonData, err := json.Marshal(testData)
+	if err != nil {
+		http.Error(w, "Failed to encode JSON", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonData)
+}
+
 func modelHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -110,6 +148,8 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/tagline", taglineHandler).Methods("GET")
 	r.HandleFunc("/model", modelHandler).Methods("POST")
+	r.HandleFunc("/message", getMessages).Methods("GET")
+	r.HandleFunc("/message", setMessages).Methods("POST")
 	r.NotFoundHandler = http.HandlerFunc(notFoundHandler)
 	middleware_wrapper := corsMiddleware(r)
 

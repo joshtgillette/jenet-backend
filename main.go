@@ -111,6 +111,7 @@ func main() {
 	r.HandleFunc("/tagline", taglineHandler).Methods("GET")
 	r.HandleFunc("/model", modelHandler).Methods("POST")
 	r.NotFoundHandler = http.HandlerFunc(notFoundHandler)
+	middleware_wrapper := corsMiddleware(r)
 
 	if os.Getenv("LOCAL") == "1" {
 		// Run as a local HTTP server for development
@@ -119,10 +120,9 @@ func main() {
 			port = "8080"
 		}
 		fmt.Printf("\nStarting local server at http://localhost:%s\n\n", port)
-		panic(http.ListenAndServe(":"+port, r))
+		panic(http.ListenAndServe(":"+port, middleware_wrapper))
 	} else {
 		// Run as AWS Lambda
-		wrapped := corsMiddleware(r)
-		lambda.Start(adapter.NewV2(wrapped).ProxyWithContext)
+		lambda.Start(adapter.NewV2(middleware_wrapper).ProxyWithContext)
 	}
 }

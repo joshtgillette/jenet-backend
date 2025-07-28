@@ -5,27 +5,21 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"slices"
 
 	"github.com/aws/aws-lambda-go/lambda"
 	adapter "github.com/awslabs/aws-lambda-go-api-proxy/httpadapter"
-	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	openai "github.com/sashabaranov/go-openai"
 )
 
-var allowedOrigins = []string{
-	"https://jenet.ai",
-	"https://dev.jenet.ai",
-	"http://localhost:3000",
-}
-
 func isAllowedOrigin(origin string) bool {
-	for _, allowed := range allowedOrigins {
-		if origin == allowed {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(
+		[]string{
+			"https://jenet.ai",
+			"https://dev.jenet.ai",
+			"http://localhost:3000",
+		}, origin)
 }
 
 func corsMiddleware(next http.Handler) http.Handler {
@@ -49,6 +43,17 @@ func corsMiddleware(next http.Handler) http.Handler {
 func taglineHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("generated ui for <i>you</i>, coming soon"))
+}
+
+func messageHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		getMessages(w, r)
+	case http.MethodPost:
+		setMessages(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
 }
 
 func setMessages(w http.ResponseWriter, r *http.Request) {
@@ -145,13 +150,12 @@ func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 func main() {
 	_ = godotenv.Load() // Loads .env file if present
 
-	r := mux.NewRouter()
-	r.HandleFunc("/tagline", taglineHandler).Methods("GET")
-	r.HandleFunc("/model", modelHandler).Methods("POST")
-	r.HandleFunc("/message", getMessages).Methods("GET")
-	r.HandleFunc("/message", setMessages).Methods("POST")
-	r.NotFoundHandler = http.HandlerFunc(notFoundHandler)
-	middleware_wrapper := corsMiddleware(r)
+	router := http.NewServeMux()
+	middleware_wrapper := corsMiddleware(router)
+
+	router.HandleFunc("/tagline", taglineHandler)
+	router.HandleFunc("/model", modelHandler)
+	router.HandleFunc("/message", messageHandler)
 
 	if os.Getenv("LOCAL") == "1" {
 		// Run as a local HTTP server for development
@@ -160,7 +164,7 @@ func main() {
 			port = "8080"
 		}
 		fmt.Printf("\nStarting local server at http://localhost:%s\n\n", port)
-		panic(http.ListenAndServe(":"+port, middleware_wrapper))
+		http.ListenAndServe(":"+port, middleware_wrapper)
 	} else {
 		// Run as AWS Lambda
 		lambda.Start(adapter.NewV2(middleware_wrapper).ProxyWithContext)
